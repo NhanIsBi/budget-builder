@@ -1,0 +1,386 @@
+<div class="container mx-auto p-6 bg-gray-50 min-h-screen">
+  <h1 class="text-3xl font-bold mb-6 text-gray-800">Budget Builder</h1>
+
+  <!-- Date Range Selector -->
+  <div class="mb-6 bg-white p-4 rounded-lg shadow">
+    <div class="flex gap-4 items-center">
+      <div class="flex items-center gap-2">
+        <label class="font-semibold text-gray-700">Start Period:</label>
+        <select
+          [(ngModel)]="startMonth"
+          (ngModelChange)="onDateRangeChange()"
+          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          @for (month of months; track month.value) {
+            <option [ngValue]="month.value">{{ month.label }}</option>
+          }
+        </select>
+        <select
+          [(ngModel)]="startYear"
+          (ngModelChange)="onDateRangeChange()"
+          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          @for (year of years; track year) {
+            <option [ngValue]="year">{{ year }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label class="font-semibold text-gray-700">End Period:</label>
+        <select
+          [(ngModel)]="endMonth"
+          (ngModelChange)="onDateRangeChange()"
+          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          @for (month of months; track month.value) {
+            <option [ngValue]="month.value">{{ month.label }}</option>
+          }
+        </select>
+        <select
+          [(ngModel)]="endYear"
+          (ngModelChange)="onDateRangeChange()"
+          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          @for (year of years; track year) {
+            <option [ngValue]="year">{{ year }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Budget Table -->
+  <div class="bg-white rounded-lg shadow overflow-x-auto">
+    <table class="w-full border-collapse">
+      <!-- Header -->
+      <thead class="bg-gray-100 sticky top-0">
+        <tr>
+          <th class="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-700 min-w-[250px]">
+            Category
+          </th>
+          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+            <th class="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-700 min-w-[120px]">
+              {{ month.display }}
+            </th>
+          }
+          <th class="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-700 w-[80px]">
+            Actions
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <!-- INCOME SECTION -->
+        <tr class="bg-blue-50">
+          <td colspan="100" class="border border-gray-300 px-4 py-3">
+            <h2 class="text-xl font-bold text-blue-900">Income</h2>
+          </td>
+        </tr>
+
+        @for (group of budgetData().incomeGroups; track trackByGroupId($index, group)) {
+          <!-- Parent Category Header -->
+          <tr class="bg-blue-100">
+            <td colspan="100" class="border border-gray-300 px-4 py-2">
+              <div class="flex items-center justify-between gap-2">
+                @if (group.isEditingName) {
+                  <input
+                    type="text"
+                    [value]="group.name"
+                    (blur)="onParentCategoryNameChange('income', group.id, $event)"
+                    (keydown)="onParentCategoryNameKeyDown($event, 'income', group.id)"
+                    class="flex-1 text-lg font-semibold text-blue-900 border border-blue-400 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter group name"
+                    autofocus>
+                } @else {
+                  <h3 class="flex-1 text-lg font-semibold text-blue-900">{{ group.name }}</h3>
+                }
+                <div class="flex gap-2">
+                  @if (!group.isEditingName) {
+                    <button
+                      (click)="startEditingParentCategoryName('income', group.id)"
+                      class="text-blue-600 hover:text-blue-800 text-sm">
+                      Edit
+                    </button>
+                  }
+                  <button
+                    (click)="deleteParentCategory('income', group.id)"
+                    class="text-red-600 hover:text-red-800 text-sm">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Categories -->
+          @for (category of group.categories; track trackByCategoryId($index, category)) {
+            <tr class="hover:bg-gray-50">
+              <td class="border border-gray-300 px-4 py-2">
+                <div class="flex items-center gap-2">
+                  @if (category.isEditing) {
+                    <input
+                      type="text"
+                      [value]="category.name"
+                      (blur)="onCategoryNameChange('income', group.id, category.id, $event)"
+                      (keydown)="onCategoryNameKeyDown($event, 'income', group.id, category.id)"
+                      class="category-name flex-1 border border-blue-400 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter category name"
+                      autofocus>
+                  } @else {
+                    <span class="flex-1 cursor-pointer hover:text-blue-600"
+                          (click)="startEditingCategory('income', group.id, category.id)"
+                          title="Click to edit">
+                      {{ category.name || 'New Category' }}
+                    </span>
+                  }
+                  <button
+                    (click)="deleteCategory('income', group.id, category.id)"
+                    class="text-red-500 hover:text-red-700 text-xs"
+                    title="Delete category">
+                    ×
+                  </button>
+                </div>
+              </td>
+              @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+                <td class="border border-gray-300 px-2 py-1">
+                  <input
+                    type="number"
+                    [value]="category.values[month.key] || 0"
+                    (input)="onCellValueChange('income', group.id, category.id, month.key, $event)"
+                    (keydown)="onCellKeyDown($event, 'income', group.id, category.id, month.key)"
+                    (contextmenu)="onCellRightClick($event, 'income', group.id, category.id, month.key)"
+                    class="w-full px-2 py-1 text-right border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                    step="0.01">
+                </td>
+              }
+              <td class="border border-gray-300 px-2 py-1"></td>
+            </tr>
+          }
+
+          <!-- Add Category Button -->
+          <tr class="bg-gray-50">
+            <td colspan="100" class="border border-gray-300 px-4 py-2">
+              <button
+                (click)="addCategory('income', group.id)"
+                class="text-blue-600 hover:text-blue-800 text-sm">
+                + Add a new '{{ group.name }}' Category
+              </button>
+            </td>
+          </tr>
+
+          <!-- Sub Total -->
+          <tr class="bg-blue-200 font-semibold">
+            <td class="border border-gray-300 px-4 py-2">Sub Totals</td>
+            @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+              <td class="border border-gray-300 px-2 py-2 text-right">
+                {{ getSubTotal(group, month.key) | number:'1.2-2' }}
+              </td>
+            }
+            <td class="border border-gray-300 px-2 py-1"></td>
+          </tr>
+        }
+
+        <!-- Add Parent Category -->
+        <tr class="bg-gray-50">
+          <td colspan="100" class="border border-gray-300 px-4 py-2">
+            <button
+              (click)="addParentCategory('income')"
+              class="text-blue-600 hover:text-blue-800 font-semibold">
+              + Add New Parent Category
+            </button>
+          </td>
+        </tr>
+
+        <!-- Income Total -->
+        <tr class="bg-blue-300 font-bold text-lg">
+          <td class="border border-gray-300 px-4 py-3">Income Total</td>
+          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+            <td class="border border-gray-300 px-2 py-3 text-right">
+              {{ incomeTotals()[month.key] | number:'1.2-2' }}
+            </td>
+          }
+          <td class="border border-gray-300 px-2 py-1"></td>
+        </tr>
+
+        <!-- EXPENSES SECTION -->
+        <tr class="bg-red-50">
+          <td colspan="100" class="border border-gray-300 px-4 py-3">
+            <h2 class="text-xl font-bold text-red-900">Expenses</h2>
+          </td>
+        </tr>
+
+        @for (group of budgetData().expenseGroups; track trackByGroupId($index, group)) {
+          <!-- Parent Category Header -->
+          <tr class="bg-red-100">
+            <td colspan="100" class="border border-gray-300 px-4 py-2">
+              <div class="flex items-center justify-between gap-2">
+                @if (group.isEditingName) {
+                  <input
+                    type="text"
+                    [value]="group.name"
+                    (blur)="onParentCategoryNameChange('expense', group.id, $event)"
+                    (keydown)="onParentCategoryNameKeyDown($event, 'expense', group.id)"
+                    class="flex-1 text-lg font-semibold text-red-900 border border-red-400 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="Enter group name"
+                    autofocus>
+                } @else {
+                  <h3 class="flex-1 text-lg font-semibold text-red-900">{{ group.name }}</h3>
+                }
+                <div class="flex gap-2">
+                  @if (!group.isEditingName) {
+                    <button
+                      (click)="startEditingParentCategoryName('expense', group.id)"
+                      class="text-blue-600 hover:text-blue-800 text-sm">
+                      Edit
+                    </button>
+                  }
+                  <button
+                    (click)="deleteParentCategory('expense', group.id)"
+                    class="text-red-600 hover:text-red-800 text-sm">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Categories -->
+          @for (category of group.categories; track trackByCategoryId($index, category)) {
+            <tr class="hover:bg-gray-50">
+              <td class="border border-gray-300 px-4 py-2">
+                <div class="flex items-center gap-2">
+                  @if (category.isEditing) {
+                    <input
+                      type="text"
+                      [value]="category.name"
+                      (blur)="onCategoryNameChange('expense', group.id, category.id, $event)"
+                      (keydown)="onCategoryNameKeyDown($event, 'expense', group.id, category.id)"
+                      class="category-name flex-1 border border-red-400 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      placeholder="Enter category name"
+                      autofocus>
+                  } @else {
+                    <span class="flex-1 cursor-pointer hover:text-blue-600"
+                          (click)="startEditingCategory('expense', group.id, category.id)"
+                          title="Click to edit">
+                      {{ category.name || 'New Category' }}
+                    </span>
+                  }
+                  <button
+                    (click)="deleteCategory('expense', group.id, category.id)"
+                    class="text-red-500 hover:text-red-700 text-xs"
+                    title="Delete category">
+                    ×
+                  </button>
+                </div>
+              </td>
+              @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+                <td class="border border-gray-300 px-2 py-1">
+                  <input
+                    type="number"
+                    [value]="category.values[month.key] || 0"
+                    (input)="onCellValueChange('expense', group.id, category.id, month.key, $event)"
+                    (keydown)="onCellKeyDown($event, 'expense', group.id, category.id, month.key)"
+                    (contextmenu)="onCellRightClick($event, 'expense', group.id, category.id, month.key)"
+                    class="w-full px-2 py-1 text-right border-0 focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
+                    step="0.01">
+                </td>
+              }
+              <td class="border border-gray-300 px-2 py-1"></td>
+            </tr>
+          }
+
+          <!-- Add Category Button -->
+          <tr class="bg-gray-50">
+            <td colspan="100" class="border border-gray-300 px-4 py-2">
+              <button
+                (click)="addCategory('expense', group.id)"
+                class="text-red-600 hover:text-red-800 text-sm">
+                + Add a new '{{ group.name }}' Category
+              </button>
+            </td>
+          </tr>
+
+          <!-- Sub Total -->
+          <tr class="bg-red-200 font-semibold">
+            <td class="border border-gray-300 px-4 py-2">Sub Totals</td>
+            @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+              <td class="border border-gray-300 px-2 py-2 text-right">
+                {{ getSubTotal(group, month.key) | number:'1.2-2' }}
+              </td>
+            }
+            <td class="border border-gray-300 px-2 py-1"></td>
+          </tr>
+        }
+
+        <!-- Add Parent Category -->
+        <tr class="bg-gray-50">
+          <td colspan="100" class="border border-gray-300 px-4 py-2">
+            <button
+              (click)="addParentCategory('expense')"
+              class="text-red-600 hover:text-red-800 font-semibold">
+              + Add New Parent Category
+            </button>
+          </td>
+        </tr>
+
+        <!-- Expenses Total -->
+        <tr class="bg-red-300 font-bold text-lg">
+          <td class="border border-gray-300 px-4 py-3">Total Expenses</td>
+          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+            <td class="border border-gray-300 px-2 py-3 text-right">
+              {{ expenseTotals()[month.key] | number:'1.2-2' }}
+            </td>
+          }
+          <td class="border border-gray-300 px-2 py-1"></td>
+        </tr>
+
+        <!-- Profit/Loss -->
+        <tr class="bg-yellow-200 font-bold text-lg">
+          <td class="border border-gray-300 px-4 py-3">Profit / Loss</td>
+          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+            <td
+              class="border border-gray-300 px-2 py-3 text-right"
+              [class.text-green-700]="profitLoss()[month.key] >= 0"
+              [class.text-red-700]="profitLoss()[month.key] < 0">
+              {{ profitLoss()[month.key] | number:'1.2-2' }}
+            </td>
+          }
+          <td class="border border-gray-300 px-2 py-1"></td>
+        </tr>
+
+        <!-- Opening Balance -->
+        <tr class="bg-green-100 font-semibold">
+          <td class="border border-gray-300 px-4 py-2">Opening Balance</td>
+          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+            <td class="border border-gray-300 px-2 py-2 text-right">
+              {{ balances().opening[month.key] | number:'1.2-2' }}
+            </td>
+          }
+          <td class="border border-gray-300 px-2 py-1"></td>
+        </tr>
+
+        <!-- Closing Balance -->
+        <tr class="bg-green-200 font-semibold">
+          <td class="border border-gray-300 px-4 py-2">Closing Balance</td>
+          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+            <td class="border border-gray-300 px-2 py-2 text-right">
+              {{ balances().closing[month.key] | number:'1.2-2' }}
+            </td>
+          }
+          <td class="border border-gray-300 px-2 py-1"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Context Menu -->
+  @if (contextMenuVisible()) {
+    <div
+      class="fixed bg-white border border-gray-300 rounded shadow-lg py-2 px-4 z-50"
+      [style.left.px]="contextMenuPosition().x"
+      [style.top.px]="contextMenuPosition().y">
+      <button
+        (click)="applyToAllMonths($event)"
+        class="text-blue-600 hover:text-blue-800 font-medium">
+        Apply to all months
+      </button>
+    </div>
+  }
+</div>
