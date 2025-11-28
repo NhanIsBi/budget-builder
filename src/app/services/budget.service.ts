@@ -27,12 +27,10 @@ export class BudgetService {
     const range = this.dateRangeSignal();
     const columns: MonthColumn[] = [];
 
-    // Validate date range
     const startDate = new Date(range.startYear, range.startMonth - 1, 1);
     const endDate = new Date(range.endYear, range.endMonth - 1, 1);
 
     if (startDate > endDate) {
-      console.warn('Invalid date range: start is after end');
       return columns;
     }
 
@@ -44,7 +42,6 @@ export class BudgetService {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
 
-    // Loop until we pass the end date
     while (
       currentYear < range.endYear ||
       (currentYear === range.endYear && currentMonth <= range.endMonth)
@@ -64,14 +61,11 @@ export class BudgetService {
         currentYear++;
       }
 
-      // Safety check to prevent infinite loop
       if (columns.length > 1200) {
-        console.error('Too many months generated, breaking loop');
         break;
       }
     }
 
-    console.log(`Generated ${columns.length} months from ${range.startMonth}/${range.startYear} to ${range.endMonth}/${range.endYear}`);
     return columns;
   });
 
@@ -187,38 +181,42 @@ export class BudgetService {
     this.budgetDataSignal.set({ incomeGroups, expenseGroups });
   }
 
-  // Update methods
+  // Update date range and sync month columns
   updateDateRange(range: DateRange): void {
-    // Force update by creating a new object
     this.dateRangeSignal.set({
       startMonth: range.startMonth,
       startYear: range.startYear,
       endMonth: range.endMonth,
       endYear: range.endYear
     });
-
-    // Wait for computed signal to update
-    setTimeout(() => {
-      this.updateAllCategoriesWithNewMonths();
-    }, 0);
+    // Synchronously update categories with new months
+    this.syncCategoriesWithMonths();
   }
 
-  private updateAllCategoriesWithNewMonths(): void {
-    const data = this.budgetDataSignal();
+  private syncCategoriesWithMonths(): void {
     const months = this.monthColumns();
+    const validKeys = new Set(months.map(m => m.key));
+    const data = this.budgetDataSignal();
 
-    const updateCategories = (categories: Category[]) => {
+    const syncCategories = (categories: Category[]) => {
       categories.forEach(cat => {
+        // Add missing month keys
         months.forEach(month => {
           if (!(month.key in cat.values)) {
             cat.values[month.key] = 0;
           }
         });
+        // Remove stale month keys
+        Object.keys(cat.values).forEach(key => {
+          if (!validKeys.has(key)) {
+            delete cat.values[key];
+          }
+        });
       });
     };
 
-    data.incomeGroups.forEach(g => updateCategories(g.categories));
-    data.expenseGroups.forEach(g => updateCategories(g.categories));
+    data.incomeGroups.forEach(g => syncCategories(g.categories));
+    data.expenseGroups.forEach(g => syncCategories(g.categories));
 
     this.budgetDataSignal.set({ ...data });
   }
@@ -254,7 +252,7 @@ export class BudgetService {
     }
   }
 
-  addCategory(groupType: 'income' | 'expense', groupId: string, categoryName: string = ''): void {
+  addCategory(groupType: 'income' | 'expense', groupId: string, categoryName: string = ''): string {
     const data = this.budgetDataSignal();
     const groups = groupType === 'income' ? data.incomeGroups : data.expenseGroups;
     const months = this.monthColumns();
@@ -264,14 +262,47 @@ export class BudgetService {
       const defaultValues: MonthData = {};
       months.forEach(m => defaultValues[m.key] = 0);
 
+      const newId = this.generateId();
       group.categories.push({
-        id: this.generateId(),
+        id: newId,
         name: categoryName,
         values: defaultValues,
         isEditing: categoryName === ''
       });
 
       this.budgetDataSignal.set({ ...data });
+      return newId;
+    }
+    return '';
+  }
+
+  // Start editing category - properly updates signal
+  startEditingCategory(groupType: 'income' | 'expense', groupId: string, categoryId: string): void {
+    const data = this.budgetDataSignal();
+    const groups = groupType === 'income' ? data.incomeGroups : data.expenseGroups;
+
+    const group = groups.find(g => g.id === groupId);
+    if (group) {
+      const category = group.categories.find(c => c.id === categoryId);
+      if (category) {
+        category.isEditing = true;
+        this.budgetDataSignal.set({ ...data });
+      }
+    }
+  }
+
+  // Cancel editing category - properly updates signal
+  cancelEditingCategory(groupType: 'income' | 'expense', groupId: string, categoryId: string): void {
+    const data = this.budgetDataSignal();
+    const groups = groupType === 'income' ? data.incomeGroups : data.expenseGroups;
+
+    const group = groups.find(g => g.id === groupId);
+    if (group) {
+      const category = group.categories.find(c => c.id === categoryId);
+      if (category) {
+        category.isEditing = false;
+        this.budgetDataSignal.set({ ...data });
+      }
     }
   }
 
@@ -301,17 +332,19 @@ export class BudgetService {
     }
   }
 
-  addParentCategory(type: 'income' | 'expense', name: string = 'New Category'): void {
+  addParentCategory(type: 'income' | 'expense', name: string = 'New Category'): string {
     const data = this.budgetDataSignal();
     const months = this.monthColumns();
     const defaultValues: MonthData = {};
     months.forEach(m => defaultValues[m.key] = 0);
 
+    const newId = this.generateId();
     const newGroup: ParentCategory = {
-      id: this.generateId(),
+      id: newId,
       name,
       type,
       isExpanded: true,
+      isEditingName: name === 'New Category',
       categories: []
     };
 
@@ -322,6 +355,7 @@ export class BudgetService {
     }
 
     this.budgetDataSignal.set({ ...data });
+    return newId;
   }
 
   updateParentCategoryName(type: 'income' | 'expense', groupId: string, name: string): void {
@@ -347,6 +381,18 @@ export class BudgetService {
     }
   }
 
+  // Cancel editing parent category - properly updates signal
+  cancelEditingParentCategoryName(type: 'income' | 'expense', groupId: string): void {
+    const data = this.budgetDataSignal();
+    const groups = type === 'income' ? data.incomeGroups : data.expenseGroups;
+
+    const group = groups.find(g => g.id === groupId);
+    if (group) {
+      group.isEditingName = false;
+      this.budgetDataSignal.set({ ...data });
+    }
+  }
+
   deleteParentCategory(type: 'income' | 'expense', groupId: string): void {
     const data = this.budgetDataSignal();
 
@@ -357,6 +403,33 @@ export class BudgetService {
     }
 
     this.budgetDataSignal.set({ ...data });
+  }
+
+  // Mark category for deletion (for inline confirmation)
+  setCategoryPendingDelete(groupType: 'income' | 'expense', groupId: string, categoryId: string, pending: boolean): void {
+    const data = this.budgetDataSignal();
+    const groups = groupType === 'income' ? data.incomeGroups : data.expenseGroups;
+
+    const group = groups.find(g => g.id === groupId);
+    if (group) {
+      const category = group.categories.find(c => c.id === categoryId);
+      if (category) {
+        category.pendingDelete = pending;
+        this.budgetDataSignal.set({ ...data });
+      }
+    }
+  }
+
+  // Mark parent category for deletion (for inline confirmation)
+  setParentCategoryPendingDelete(type: 'income' | 'expense', groupId: string, pending: boolean): void {
+    const data = this.budgetDataSignal();
+    const groups = type === 'income' ? data.incomeGroups : data.expenseGroups;
+
+    const group = groups.find(g => g.id === groupId);
+    if (group) {
+      group.pendingDelete = pending;
+      this.budgetDataSignal.set({ ...data });
+    }
   }
 
   getSubTotal(group: ParentCategory, monthKey: string): number {

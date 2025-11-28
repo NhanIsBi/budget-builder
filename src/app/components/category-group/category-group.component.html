@@ -1,0 +1,128 @@
+<!-- Parent Category Header -->
+<tr [class]="bgHeaderClass">
+  <td [attr.colspan]="colspanValue" class="border border-gray-300 px-4 py-2">
+    <div class="flex items-center justify-between gap-2">
+      @if (group.isEditingName) {
+        <input
+          #parentNameInput
+          type="text"
+          [value]="group.name"
+          (blur)="onParentNameBlur($event)"
+          (keydown)="onParentNameKeyDown($event)"
+          [class]="'flex-1 text-lg font-semibold border rounded px-2 py-1 focus:outline-none focus:ring-2 ' + textColorClass + ' ' + borderColorClass + ' ' + focusRingClass"
+          placeholder="Enter group name"
+          autofocus>
+      } @else {
+        <h3 [class]="'flex-1 text-lg font-semibold ' + textColorClass">{{ group.name }}</h3>
+      }
+      <div class="flex gap-2">
+        @if (group.pendingDelete) {
+          <span class="text-sm text-gray-600">Delete?</span>
+          <button
+            (click)="confirmDeleteParent()"
+            class="text-red-600 hover:text-red-800 text-sm font-semibold">
+            Yes
+          </button>
+          <button
+            (click)="cancelDeleteParent()"
+            class="text-gray-600 hover:text-gray-800 text-sm">
+            No
+          </button>
+        } @else {
+          @if (!group.isEditingName) {
+            <button
+              (click)="parentStartEdit.emit()"
+              class="text-blue-600 hover:text-blue-800 text-sm">
+              Edit
+            </button>
+          }
+          <button
+            (click)="requestDeleteParent()"
+            class="text-red-600 hover:text-red-800 text-sm">
+            Delete
+          </button>
+        }
+      </div>
+    </div>
+  </td>
+</tr>
+
+<!-- Categories -->
+@for (category of group.categories; track trackByCategoryId($index, category)) {
+  <tr class="hover:bg-gray-50 category-row" [attr.data-category-id]="category.id">
+    <td class="border border-gray-300 px-4 py-2">
+      <div class="flex items-center gap-2">
+        @if (category.isEditing) {
+          <input
+            #categoryNameInput
+            type="text"
+            [value]="category.name"
+            (blur)="onCategoryNameBlur(category.id, $event)"
+            (keydown)="onCategoryNameKeyDown(category.id, $event)"
+            [class]="'category-name flex-1 border rounded px-2 py-1 focus:outline-none focus:ring-2 ' + borderColorClass + ' ' + focusRingClass"
+            placeholder="Enter category name"
+            autofocus>
+        } @else {
+          <span class="flex-1 cursor-pointer hover:text-blue-600"
+                (click)="categoryStartEdit.emit({ categoryId: category.id })"
+                title="Click to edit">
+            {{ category.name || 'New Category' }}
+          </span>
+        }
+        @if (category.pendingDelete) {
+          <span class="text-xs text-gray-500">Delete?</span>
+          <button
+            (click)="confirmDeleteCategory(category.id)"
+            class="text-red-600 hover:text-red-800 text-xs font-semibold">
+            Yes
+          </button>
+          <button
+            (click)="cancelDeleteCategory(category.id)"
+            class="text-gray-500 hover:text-gray-700 text-xs">
+            No
+          </button>
+        } @else {
+          <button
+            (click)="requestDeleteCategory(category.id)"
+            class="text-red-500 hover:text-red-700 text-xs"
+            title="Delete category">
+            ×
+          </button>
+        }
+      </div>
+    </td>
+    @for (month of monthColumns; track trackByMonthKey($index, month)) {
+      <td class="border border-gray-300 px-2 py-1 value-cell" [attr.data-month-key]="month.key">
+        <input
+          type="number"
+          [value]="category.values[month.key] || 0"
+          (input)="onCellValueChange(category.id, month.key, $event)"
+          (keydown)="onCellKeyDown(category.id, month.key, $event)"
+          (contextmenu)="onCellRightClick(category.id, month.key, $event)"
+          [class]="'w-full px-2 py-1 text-right border-0 focus:outline-none focus:ring-2 rounded ' + focusRingClass"
+          step="0.01">
+      </td>
+    }
+  </tr>
+}
+
+<!-- Add Category Button -->
+<tr class="bg-gray-50">
+  <td [attr.colspan]="colspanValue" class="border border-gray-300 px-4 py-2">
+    <button
+      (click)="categoryAdd.emit()"
+      [class]="buttonColorClass + ' text-sm'">
+      + Add a new '{{ group.name }}' Category
+    </button>
+  </td>
+</tr>
+
+<!-- Sub Total -->
+<tr [class]="bgSubtotalClass + ' font-semibold'">
+  <td class="border border-gray-300 px-4 py-2">Sub Totals</td>
+  @for (month of monthColumns; track trackByMonthKey($index, month)) {
+    <td class="border border-gray-300 px-2 py-2 text-right subtotal-cell">
+      {{ getSubTotal(month.key) | number:'1.2-2' }}
+    </td>
+  }
+</tr>

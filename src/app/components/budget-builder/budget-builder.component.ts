@@ -1,21 +1,24 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ElementRef, ViewChild, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BudgetService } from '../../services/budget.service';
-import { ParentCategory, Category } from '../../models/budget.model';
+import { ParentCategory, MonthColumn } from '../../models/budget.model';
+import { CategoryGroupComponent } from '../category-group/category-group.component';
 
 @Component({
   selector: 'app-budget-builder',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CategoryGroupComponent],
   templateUrl: './budget-builder.component.html',
   styleUrl: './budget-builder.component.css'
 })
-export class BudgetBuilderComponent implements OnInit {
-  // State
+export class BudgetBuilderComponent implements OnInit, OnDestroy {
+  @ViewChild('budgetTable') budgetTable!: ElementRef<HTMLTableElement>;
+
+  // Context menu state using signals
   contextMenuVisible = signal(false);
   contextMenuPosition = signal({ x: 0, y: 0 });
-  contextMenuData = signal<{ groupType: 'income' | 'expense', groupId: string, categoryId: string, value: number } | null>(null);
+  contextMenuData = signal<{ groupType: 'income' | 'expense'; groupId: string; categoryId: string; monthKey: string; value: number } | null>(null);
 
   // Date range selections
   startMonth = 1;
@@ -48,23 +51,29 @@ export class BudgetBuilderComponent implements OnInit {
   profitLoss = this.budgetService.profitLoss;
   balances = this.budgetService.balances;
 
-  constructor(public budgetService: BudgetService) {
-    // Close context menu on click outside
-    if (typeof document !== 'undefined') {
-      document.addEventListener('click', () => {
-        this.contextMenuVisible.set(false);
-      });
+  constructor(public budgetService: BudgetService) {}
+
+  ngOnInit(): void {
+    // Initial focus handled through template autofocus
+  }
+
+  ngOnDestroy(): void {
+    // Cleanup is handled by Angular for HostListener
+  }
+
+  // Use HostListener for proper cleanup
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    // Only close if click is outside context menu
+    if (!target.closest('.context-menu')) {
+      this.contextMenuVisible.set(false);
     }
   }
 
-  ngOnInit(): void {
-    // Focus first input after view init
-    setTimeout(() => {
-      const firstInput = document.querySelector('input[type="number"]') as HTMLInputElement;
-      if (firstInput) {
-        firstInput.focus();
-      }
-    }, 100);
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.contextMenuVisible.set(false);
   }
 
   onDateRangeChange(): void {
@@ -76,13 +85,90 @@ export class BudgetBuilderComponent implements OnInit {
     });
   }
 
-  onCellValueChange(groupType: 'income' | 'expense', groupId: string, categoryId: string, monthKey: string, event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value) || 0;
-    this.budgetService.updateCategoryValue(groupType, groupId, categoryId, monthKey, value);
+  // Handle category value changes from subcomponent
+  onCategoryValueChange(groupType: 'income' | 'expense', groupId: string, data: { categoryId: string; monthKey: string; value: number }): void {
+    this.budgetService.updateCategoryValue(groupType, groupId, data.categoryId, data.monthKey, data.value);
   }
 
-  onCellKeyDown(event: KeyboardEvent, groupType: 'income' | 'expense', groupId: string, categoryId: string, monthKey: string): void {
+  // Handle category name changes from subcomponent
+  onCategoryNameChange(groupType: 'income' | 'expense', groupId: string, data: { categoryId: string; name: string }): void {
+    this.budgetService.updateCategoryName(groupType, groupId, data.categoryId, data.name);
+  }
+
+  // Handle add category from subcomponent
+  onCategoryAdd(groupType: 'income' | 'expense', groupId: string): void {
+    this.budgetService.addCategory(groupType, groupId);
+  }
+
+  // Handle delete category from subcomponent
+  onCategoryDelete(groupType: 'income' | 'expense', groupId: string, data: { categoryId: string }): void {
+    this.budgetService.deleteCategory(groupType, groupId, data.categoryId);
+  }
+
+  // Handle start editing category from subcomponent
+  onCategoryStartEdit(groupType: 'income' | 'expense', groupId: string, data: { categoryId: string }): void {
+    this.budgetService.startEditingCategory(groupType, groupId, data.categoryId);
+  }
+
+  // Handle cancel editing category from subcomponent
+  onCategoryCancelEdit(groupType: 'income' | 'expense', groupId: string, data: { categoryId: string }): void {
+    this.budgetService.cancelEditingCategory(groupType, groupId, data.categoryId);
+  }
+
+  // Handle set category pending delete from subcomponent
+  onCategorySetPendingDelete(groupType: 'income' | 'expense', groupId: string, data: { categoryId: string; pending: boolean }): void {
+    this.budgetService.setCategoryPendingDelete(groupType, groupId, data.categoryId, data.pending);
+  }
+
+  // Handle parent name change from subcomponent
+  onParentNameChange(groupType: 'income' | 'expense', groupId: string, data: { name: string }): void {
+    this.budgetService.updateParentCategoryName(groupType, groupId, data.name);
+  }
+
+  // Handle start editing parent from subcomponent
+  onParentStartEdit(groupType: 'income' | 'expense', groupId: string): void {
+    this.budgetService.startEditingParentCategoryName(groupType, groupId);
+  }
+
+  // Handle cancel editing parent from subcomponent
+  onParentCancelEdit(groupType: 'income' | 'expense', groupId: string): void {
+    this.budgetService.cancelEditingParentCategoryName(groupType, groupId);
+  }
+
+  // Handle delete parent from subcomponent
+  onParentDelete(groupType: 'income' | 'expense', groupId: string): void {
+    this.budgetService.deleteParentCategory(groupType, groupId);
+  }
+
+  // Handle set parent pending delete from subcomponent
+  onParentSetPendingDelete(groupType: 'income' | 'expense', groupId: string, data: { pending: boolean }): void {
+    this.budgetService.setParentCategoryPendingDelete(groupType, groupId, data.pending);
+  }
+
+  // Handle add parent category
+  addParentCategory(type: 'income' | 'expense'): void {
+    this.budgetService.addParentCategory(type);
+  }
+
+  // Handle right click on cell from subcomponent
+  onCellRightClick(groupType: 'income' | 'expense', groupId: string, data: { event: MouseEvent; categoryId: string; monthKey: string }): void {
+    const input = data.event.target as HTMLInputElement;
+    const value = parseFloat(input.value) || 0;
+
+    this.contextMenuData.set({
+      groupType,
+      groupId,
+      categoryId: data.categoryId,
+      monthKey: data.monthKey,
+      value
+    });
+    this.contextMenuPosition.set({ x: data.event.clientX, y: data.event.clientY });
+    this.contextMenuVisible.set(true);
+  }
+
+  // Handle keyboard navigation from subcomponent
+  onCellKeyDown(groupType: 'income' | 'expense', groupId: string, data: { event: KeyboardEvent; categoryId: string; monthKey: string }): void {
+    const event = data.event;
     const input = event.target as HTMLInputElement;
     const currentCell = input.closest('td');
 
@@ -91,16 +177,7 @@ export class BudgetBuilderComponent implements OnInit {
     switch (event.key) {
       case 'Enter':
         event.preventDefault();
-        // Add new category in the same group
         this.budgetService.addCategory(groupType, groupId);
-        setTimeout(() => {
-          // Focus the name input of the new category
-          const newInputs = document.querySelectorAll('input.category-name');
-          const lastInput = newInputs[newInputs.length - 1] as HTMLInputElement;
-          if (lastInput) {
-            lastInput.focus();
-          }
-        }, 50);
         break;
 
       case 'Tab':
@@ -109,58 +186,40 @@ export class BudgetBuilderComponent implements OnInit {
 
       case 'ArrowRight':
         event.preventDefault();
-        this.moveFocus(currentCell, 'right');
+        this.moveFocusHorizontal(currentCell, 1);
         break;
 
       case 'ArrowLeft':
         event.preventDefault();
-        this.moveFocus(currentCell, 'left');
+        this.moveFocusHorizontal(currentCell, -1);
         break;
 
       case 'ArrowDown':
         event.preventDefault();
-        this.moveFocus(currentCell, 'down');
+        this.moveFocusVertical(currentCell, 1);
         break;
 
       case 'ArrowUp':
         event.preventDefault();
-        this.moveFocus(currentCell, 'up');
+        this.moveFocusVertical(currentCell, -1);
         break;
     }
   }
 
-  private moveFocus(currentCell: Element, direction: 'up' | 'down' | 'left' | 'right'): void {
+  // Improved horizontal focus movement
+  private moveFocusHorizontal(currentCell: Element, direction: number): void {
     const row = currentCell.closest('tr');
     if (!row) return;
 
-    const cells = Array.from(row.querySelectorAll('td'));
+    const cells = Array.from(row.querySelectorAll('td.value-cell'));
     const currentIndex = cells.indexOf(currentCell as HTMLTableCellElement);
 
-    let targetCell: Element | null = null;
+    if (currentIndex === -1) return;
 
-    switch (direction) {
-      case 'right':
-        targetCell = cells[currentIndex + 1];
-        break;
-      case 'left':
-        targetCell = cells[currentIndex - 1];
-        break;
-      case 'down':
-        const nextRow = row.nextElementSibling;
-        if (nextRow) {
-          targetCell = nextRow.querySelectorAll('td')[currentIndex];
-        }
-        break;
-      case 'up':
-        const prevRow = row.previousElementSibling;
-        if (prevRow) {
-          targetCell = prevRow.querySelectorAll('td')[currentIndex];
-        }
-        break;
-    }
-
-    if (targetCell) {
-      const input = targetCell.querySelector('input') as HTMLInputElement;
+    const targetIndex = currentIndex + direction;
+    if (targetIndex >= 0 && targetIndex < cells.length) {
+      const targetCell = cells[targetIndex];
+      const input = targetCell.querySelector('input[type="number"]') as HTMLInputElement;
       if (input) {
         input.focus();
         input.select();
@@ -168,16 +227,38 @@ export class BudgetBuilderComponent implements OnInit {
     }
   }
 
-  onCellRightClick(event: MouseEvent, groupType: 'income' | 'expense', groupId: string, categoryId: string, monthKey: string): void {
-    event.preventDefault();
-    event.stopPropagation();
+  // Improved vertical focus movement - skips non-data rows
+  private moveFocusVertical(currentCell: Element, direction: number): void {
+    const currentRow = currentCell.closest('tr');
+    if (!currentRow) return;
 
-    const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value) || 0;
+    const table = currentRow.closest('table');
+    if (!table) return;
 
-    this.contextMenuData.set({ groupType, groupId, categoryId, value });
-    this.contextMenuPosition.set({ x: event.clientX, y: event.clientY });
-    this.contextMenuVisible.set(true);
+    // Get all category rows (rows that have value-cell td elements)
+    const allRows = Array.from(table.querySelectorAll('tr.category-row'));
+    const currentRowIndex = allRows.indexOf(currentRow as HTMLTableRowElement);
+
+    if (currentRowIndex === -1) return;
+
+    // Get current cell's month key for column matching
+    const monthKey = currentCell.getAttribute('data-month-key');
+    if (!monthKey) return;
+
+    // Find the target row
+    const targetRowIndex = currentRowIndex + direction;
+    if (targetRowIndex >= 0 && targetRowIndex < allRows.length) {
+      const targetRow = allRows[targetRowIndex];
+      // Find cell with same month key
+      const targetCell = targetRow.querySelector(`td.value-cell[data-month-key="${monthKey}"]`);
+      if (targetCell) {
+        const input = targetCell.querySelector('input[type="number"]') as HTMLInputElement;
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }
+    }
   }
 
   applyToAllMonths(event: Event): void {
@@ -189,121 +270,11 @@ export class BudgetBuilderComponent implements OnInit {
     this.contextMenuVisible.set(false);
   }
 
-  addCategory(groupType: 'income' | 'expense', groupId: string): void {
-    this.budgetService.addCategory(groupType, groupId);
-  }
-
-  startEditingCategory(groupType: 'income' | 'expense', groupId: string, categoryId: string): void {
-    const data = this.budgetData();
-    const groups = groupType === 'income' ? data.incomeGroups : data.expenseGroups;
-    const group = groups.find(g => g.id === groupId);
-
-    if (group) {
-      const category = group.categories.find(c => c.id === categoryId);
-      if (category) {
-        category.isEditing = true;
-      }
-    }
-  }
-
-  onCategoryNameChange(groupType: 'income' | 'expense', groupId: string, categoryId: string, event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.budgetService.updateCategoryName(groupType, groupId, categoryId, input.value);
-  }
-
-  onCategoryNameKeyDown(event: KeyboardEvent, groupType: 'income' | 'expense', groupId: string, categoryId: string): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      const input = event.target as HTMLInputElement;
-      this.budgetService.updateCategoryName(groupType, groupId, categoryId, input.value);
-
-      // Focus first value input of this category
-      setTimeout(() => {
-        const row = input.closest('tr');
-        if (row) {
-          const firstValueInput = row.querySelector('input[type="number"]') as HTMLInputElement;
-          if (firstValueInput) {
-            firstValueInput.focus();
-          }
-        }
-      }, 50);
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      // Cancel editing - reset to original state
-      const data = this.budgetData();
-      const groups = groupType === 'income' ? data.incomeGroups : data.expenseGroups;
-      const group = groups.find(g => g.id === groupId);
-      if (group) {
-        const category = group.categories.find(c => c.id === categoryId);
-        if (category) {
-          category.isEditing = false;
-        }
-      }
-    }
-  }
-
-  deleteCategory(groupType: 'income' | 'expense', groupId: string, categoryId: string): void {
-    if (confirm('Are you sure you want to delete this category?')) {
-      this.budgetService.deleteCategory(groupType, groupId, categoryId);
-    }
-  }
-
-  addParentCategory(type: 'income' | 'expense'): void {
-    const name = prompt('Enter parent category name:');
-    if (name) {
-      this.budgetService.addParentCategory(type, name);
-    }
-  }
-
-  startEditingParentCategoryName(type: 'income' | 'expense', groupId: string): void {
-    this.budgetService.startEditingParentCategoryName(type, groupId);
-  }
-
-  onParentCategoryNameChange(type: 'income' | 'expense', groupId: string, event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.value.trim()) {
-      this.budgetService.updateParentCategoryName(type, groupId, input.value.trim());
-    }
-  }
-
-  onParentCategoryNameKeyDown(event: KeyboardEvent, type: 'income' | 'expense', groupId: string): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      const input = event.target as HTMLInputElement;
-      if (input.value.trim()) {
-        this.budgetService.updateParentCategoryName(type, groupId, input.value.trim());
-      }
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      // Cancel editing - reset to original name
-      const data = this.budgetData();
-      const groups = type === 'income' ? data.incomeGroups : data.expenseGroups;
-      const group = groups.find(g => g.id === groupId);
-      if (group) {
-        group.isEditingName = false;
-      }
-    }
-  }
-
-  deleteParentCategory(type: 'income' | 'expense', groupId: string): void {
-    if (confirm('Are you sure you want to delete this parent category and all its sub-categories?')) {
-      this.budgetService.deleteParentCategory(type, groupId);
-    }
-  }
-
-  getSubTotal(group: ParentCategory, monthKey: string): number {
-    return this.budgetService.getSubTotal(group, monthKey);
-  }
-
   trackByGroupId(index: number, group: ParentCategory): string {
     return group.id;
   }
 
-  trackByCategoryId(index: number, category: Category): string {
-    return category.id;
-  }
-
-  trackByMonthKey(index: number, month: any): string {
+  trackByMonthKey(index: number, month: MonthColumn): string {
     return month.key;
   }
 }

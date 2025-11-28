@@ -7,6 +7,7 @@ export interface Category {
   name: string;
   values: MonthData;
   isEditing?: boolean;
+  pendingDelete?: boolean;
 }
 
 export interface ParentCategory {
@@ -16,6 +17,7 @@ export interface ParentCategory {
   categories: Category[];
   isExpanded?: boolean;
   isEditingName?: boolean;
+  pendingDelete?: boolean;
 }
 
 export interface BudgetData {
