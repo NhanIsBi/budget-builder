@@ -1,13 +1,11 @@
 {
-  "buildCommand": "npm run build",
+  "version": 2,
+  "buildCommand": "npm run build -- --configuration production",
   "outputDirectory": "dist/budget-builder/browser",
-  "devCommand": "npm start",
-  "installCommand": "npm install",
-  "framework": null,
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
