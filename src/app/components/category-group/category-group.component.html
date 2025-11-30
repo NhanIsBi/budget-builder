@@ -55,7 +55,7 @@
 <!-- Categories -->
 @for (category of group.categories; track trackByCategoryId($index, category)) {
   <tr class="hover:bg-gray-50 category-row" role="row" [attr.data-category-id]="category.id">
-    <td class="border border-gray-300 px-4 py-2" role="rowheader">
+    <td class="border border-gray-300 px-4 py-2 sticky left-0 bg-white min-w-[250px] z-10" role="rowheader">
       <div class="flex items-center gap-2">
         @if (category.isEditing) {
           <input
@@ -134,7 +134,7 @@
 
 <!-- Sub Total -->
 <tr [class]="bgSubtotalClass + ' font-semibold'" role="row">
-  <th scope="row" class="border border-gray-300 px-4 py-2 text-left">Sub Totals</th>
+  <th scope="row" [class]="'border border-gray-300 px-4 py-2 text-left sticky left-0 min-w-[250px] z-10 ' + bgSubtotalClass">Sub Totals</th>
   @for (month of monthColumns; track trackByMonthKey($index, month)) {
     <td class="border border-gray-300 px-2 py-2 text-right subtotal-cell" role="gridcell" [attr.aria-describedby]="'month-header-' + month.key">
       {{ getSubTotal(month.key) | number:'1.2-2' }}
