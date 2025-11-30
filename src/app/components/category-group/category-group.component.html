@@ -1,6 +1,6 @@
 <!-- Parent Category Header -->
 <tr [class]="bgHeaderClass" role="row">
-  <td [attr.colspan]="colspanValue" class="border border-gray-300 px-4 py-2" role="rowheader">
+  <td [class]="'border border-gray-300 px-4 py-2 sticky left-0 min-w-[250px] z-10 ' + bgHeaderClass" role="rowheader">
     <div class="flex items-center justify-between gap-2">
       @if (group.isEditingName) {
         <input
@@ -16,40 +16,55 @@
       } @else {
         <h3 [class]="'flex-1 text-lg font-semibold ' + textColorClass">{{ group.name }}</h3>
       }
-      <div class="flex gap-2" role="group" aria-label="Category group actions">
+      <div class="flex gap-1 items-center" role="group" aria-label="Category group actions">
         @if (group.pendingDelete) {
-          <span class="text-sm text-gray-600">Delete this group?</span>
+          <span class="text-sm text-gray-600 mr-1">Delete?</span>
           <button
             (click)="confirmDeleteParent()"
-            class="text-red-600 hover:text-red-800 text-sm font-semibold"
-            aria-label="Confirm delete group">
-            Yes
+            class="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded"
+            aria-label="Confirm delete group"
+            title="Yes, delete">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
           </button>
           <button
             (click)="cancelDeleteParent()"
-            class="text-gray-600 hover:text-gray-800 text-sm"
-            aria-label="Cancel delete group">
-            No
+            class="p-1 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded"
+            aria-label="Cancel delete group"
+            title="Cancel">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
           </button>
         } @else {
           @if (!group.isEditingName) {
             <button
               (click)="parentStartEdit.emit()"
-              class="text-blue-600 hover:text-blue-800 text-sm"
-              aria-label="Edit group name">
-              Edit
+              class="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded"
+              aria-label="Edit group name"
+              title="Edit">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
             </button>
           }
           <button
             (click)="requestDeleteParent()"
-            class="text-red-600 hover:text-red-800 text-sm"
-            aria-label="Delete this category group">
-            Delete
+            class="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
+            aria-label="Delete this category group"
+            title="Delete">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
           </button>
         }
       </div>
     </div>
   </td>
+  @for (month of monthColumns; track trackByMonthKey($index, month)) {
+    <td [class]="'border border-gray-300 ' + bgHeaderClass"></td>
+  }
 </tr>
 
 <!-- Categories -->
@@ -79,26 +94,34 @@
           </span>
         }
         @if (category.pendingDelete) {
-          <span class="text-xs text-gray-500">Delete?</span>
+          <span class="text-xs text-gray-500 mr-1">Delete?</span>
           <button
             (click)="confirmDeleteCategory(category.id)"
-            class="text-red-600 hover:text-red-800 text-xs font-semibold"
-            aria-label="Confirm delete category">
-            Yes
+            class="p-0.5 text-green-600 hover:text-green-800 hover:bg-green-100 rounded"
+            aria-label="Confirm delete category"
+            title="Yes, delete">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
           </button>
           <button
             (click)="cancelDeleteCategory(category.id)"
-            class="text-gray-500 hover:text-gray-700 text-xs"
-            aria-label="Cancel delete category">
-            No
+            class="p-0.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+            aria-label="Cancel delete category"
+            title="Cancel">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
           </button>
         } @else {
           <button
             (click)="requestDeleteCategory(category.id)"
-            class="text-red-500 hover:text-red-700 text-xs"
+            class="p-0.5 text-red-500 hover:text-red-700 hover:bg-red-100 rounded opacity-50 hover:opacity-100 transition-opacity"
             aria-label="Delete category"
             title="Delete category">
-            ×
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
           </button>
         }
       </div>
@@ -122,7 +145,7 @@
 
 <!-- Add Category Button -->
 <tr class="bg-gray-50" role="row">
-  <td [attr.colspan]="colspanValue" class="border border-gray-300 px-4 py-2">
+  <td class="border border-gray-300 px-4 py-2 sticky left-0 bg-gray-50 min-w-[250px] z-10">
     <button
       (click)="categoryAdd.emit()"
       [class]="buttonColorClass + ' text-sm'"
@@ -130,6 +153,9 @@
       + Add a new '{{ group.name }}' Category
     </button>
   </td>
+  @for (month of monthColumns; track trackByMonthKey($index, month)) {
+    <td class="border border-gray-300 bg-gray-50"></td>
+  }
 </tr>
 
 <!-- Sub Total -->
