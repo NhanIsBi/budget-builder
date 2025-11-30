@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener, ElementRef, ViewChild, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ElementRef, ViewChild, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BudgetService } from '../../services/budget.service';
@@ -50,6 +50,20 @@ export class BudgetBuilderComponent implements OnInit, OnDestroy {
   expenseTotals = this.budgetService.expenseTotals;
   profitLoss = this.budgetService.profitLoss;
   balances = this.budgetService.balances;
+
+  // New computed signals for better reactivity
+  colspanValue = this.budgetService.colspanValue;
+  loading = this.budgetService.loading;
+  error = this.budgetService.error;
+  hasAnyData = this.budgetService.hasAnyData;
+  totalCategoriesCount = this.budgetService.totalCategoriesCount;
+
+  // Computed signal for table aria-label
+  tableAriaLabel = computed(() => {
+    const months = this.monthColumns();
+    const count = this.totalCategoriesCount();
+    return `Budget table with ${count} categories across ${months.length} months`;
+  });
 
   constructor(public budgetService: BudgetService) {}
 
@@ -216,18 +230,23 @@ export class BudgetBuilderComponent implements OnInit, OnDestroy {
 
     if (currentIndex === -1) return;
 
-    const targetIndex = currentIndex + direction;
-    if (targetIndex >= 0 && targetIndex < cells.length) {
-      const targetCell = cells[targetIndex];
-      const input = targetCell.querySelector('input[type="number"]') as HTMLInputElement;
-      if (input) {
-        input.focus();
-        input.select();
-      }
+    // Calculate target index with wrap-around
+    let targetIndex = currentIndex + direction;
+    if (targetIndex < 0) {
+      targetIndex = cells.length - 1; // Wrap to end
+    } else if (targetIndex >= cells.length) {
+      targetIndex = 0; // Wrap to beginning
+    }
+
+    const targetCell = cells[targetIndex];
+    const input = targetCell.querySelector('input[type="number"]') as HTMLInputElement;
+    if (input) {
+      input.focus();
+      input.select();
     }
   }
 
-  // Improved vertical focus movement - skips non-data rows
+  // Improved vertical focus movement - skips non-data rows with wrap-around
   private moveFocusVertical(currentCell: Element, direction: number): void {
     const currentRow = currentCell.closest('tr');
     if (!currentRow) return;
@@ -245,18 +264,22 @@ export class BudgetBuilderComponent implements OnInit, OnDestroy {
     const monthKey = currentCell.getAttribute('data-month-key');
     if (!monthKey) return;
 
-    // Find the target row
-    const targetRowIndex = currentRowIndex + direction;
-    if (targetRowIndex >= 0 && targetRowIndex < allRows.length) {
-      const targetRow = allRows[targetRowIndex];
-      // Find cell with same month key
-      const targetCell = targetRow.querySelector(`td.value-cell[data-month-key="${monthKey}"]`);
-      if (targetCell) {
-        const input = targetCell.querySelector('input[type="number"]') as HTMLInputElement;
-        if (input) {
-          input.focus();
-          input.select();
-        }
+    // Calculate target row index with wrap-around
+    let targetRowIndex = currentRowIndex + direction;
+    if (targetRowIndex < 0) {
+      targetRowIndex = allRows.length - 1; // Wrap to last row
+    } else if (targetRowIndex >= allRows.length) {
+      targetRowIndex = 0; // Wrap to first row
+    }
+
+    const targetRow = allRows[targetRowIndex];
+    // Find cell with same month key
+    const targetCell = targetRow.querySelector(`td.value-cell[data-month-key="${monthKey}"]`);
+    if (targetCell) {
+      const input = targetCell.querySelector('input[type="number"]') as HTMLInputElement;
+      if (input) {
+        input.focus();
+        input.select();
       }
     }
   }

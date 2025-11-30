@@ -22,6 +22,13 @@ export class BudgetService {
   dateRange = this.dateRangeSignal.asReadonly();
   budgetData = this.budgetDataSignal.asReadonly();
 
+  // Loading and error state signals
+  private loadingSignal = signal(true);
+  private errorSignal = signal<string | null>(null);
+
+  loading = this.loadingSignal.asReadonly();
+  error = this.errorSignal.asReadonly();
+
   // Computed month columns based on date range
   monthColumns = computed(() => {
     const range = this.dateRangeSignal();
@@ -67,6 +74,22 @@ export class BudgetService {
     }
 
     return columns;
+  });
+
+  // Computed colspan value for full-width rows
+  colspanValue = computed(() => this.monthColumns().length + 1);
+
+  // Computed empty state checks
+  hasIncomeGroups = computed(() => this.budgetDataSignal().incomeGroups.length > 0);
+  hasExpenseGroups = computed(() => this.budgetDataSignal().expenseGroups.length > 0);
+  hasAnyData = computed(() => this.hasIncomeGroups() || this.hasExpenseGroups());
+
+  // Computed total categories count
+  totalCategoriesCount = computed(() => {
+    const data = this.budgetDataSignal();
+    const incomeCount = data.incomeGroups.reduce((sum, g) => sum + g.categories.length, 0);
+    const expenseCount = data.expenseGroups.reduce((sum, g) => sum + g.categories.length, 0);
+    return incomeCount + expenseCount;
   });
 
   // Computed totals
@@ -127,10 +150,24 @@ export class BudgetService {
     this.initializeDefaultData();
   }
 
+  // Methods to manage loading/error states
+  setLoading(loading: boolean): void {
+    this.loadingSignal.set(loading);
+  }
+
+  setError(error: string | null): void {
+    this.errorSignal.set(error);
+  }
+
+  clearError(): void {
+    this.errorSignal.set(null);
+  }
+
   private initializeDefaultData(): void {
-    const months = this.monthColumns();
-    const defaultValues: MonthData = {};
-    months.forEach(m => defaultValues[m.key] = 0);
+    try {
+      const months = this.monthColumns();
+      const defaultValues: MonthData = {};
+      months.forEach(m => defaultValues[m.key] = 0);
 
     const incomeGroups: ParentCategory[] = [
       {
@@ -178,7 +215,12 @@ export class BudgetService {
       }
     ];
 
-    this.budgetDataSignal.set({ incomeGroups, expenseGroups });
+      this.budgetDataSignal.set({ incomeGroups, expenseGroups });
+      this.loadingSignal.set(false);
+    } catch (error) {
+      this.errorSignal.set('Failed to initialize budget data');
+      this.loadingSignal.set(false);
+    }
   }
 
   // Update date range and sync month columns

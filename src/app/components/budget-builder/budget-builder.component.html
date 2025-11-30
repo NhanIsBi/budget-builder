@@ -1,75 +1,108 @@
-<div class="container mx-auto p-6 bg-gray-50 min-h-screen">
-  <h1 class="text-3xl font-bold mb-6 text-gray-800">Budget Builder</h1>
+<div class="container mx-auto p-6 bg-gray-50 min-h-screen" role="main" aria-label="Budget Builder Application">
+  <h1 class="text-3xl font-bold mb-6 text-gray-800" id="page-title">Budget Builder</h1>
+
+  <!-- Error Display -->
+  @if (error()) {
+    <div role="alert" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center justify-between">
+      <span>{{ error() }}</span>
+      <button
+        (click)="budgetService.clearError()"
+        class="text-red-700 hover:text-red-900 font-bold"
+        aria-label="Dismiss error">
+        ×
+      </button>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div role="status" aria-live="polite" class="mb-6 flex items-center justify-center p-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+      <span class="text-gray-600">Loading budget data...</span>
+    </div>
+  }
 
   <!-- Date Range Selector -->
-  <div class="mb-6 bg-white p-4 rounded-lg shadow">
-    <div class="flex gap-4 items-center flex-wrap">
-      <div class="flex items-center gap-2">
-        <label class="font-semibold text-gray-700">Start Period:</label>
-        <select
-          [(ngModel)]="startMonth"
-          (ngModelChange)="onDateRangeChange()"
-          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          @for (month of months; track month.value) {
-            <option [ngValue]="month.value">{{ month.label }}</option>
-          }
-        </select>
-        <select
-          [(ngModel)]="startYear"
-          (ngModelChange)="onDateRangeChange()"
-          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          @for (year of years; track year) {
-            <option [ngValue]="year">{{ year }}</option>
-          }
-        </select>
-      </div>
+  @if (!loading()) {
+    <fieldset class="mb-6 bg-white p-4 rounded-lg shadow" role="group" aria-label="Date range selection">
+      <legend class="sr-only">Select budget date range</legend>
+      <div class="flex gap-4 items-center flex-wrap">
+        <div class="flex items-center gap-2">
+          <label for="startMonth" class="font-semibold text-gray-700">Start Period:</label>
+          <select
+            id="startMonth"
+            [(ngModel)]="startMonth"
+            (ngModelChange)="onDateRangeChange()"
+            aria-label="Start month"
+            class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            @for (month of months; track month.value) {
+              <option [ngValue]="month.value">{{ month.label }}</option>
+            }
+          </select>
+          <select
+            id="startYear"
+            [(ngModel)]="startYear"
+            (ngModelChange)="onDateRangeChange()"
+            aria-label="Start year"
+            class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            @for (year of years; track year) {
+              <option [ngValue]="year">{{ year }}</option>
+            }
+          </select>
+        </div>
 
-      <div class="flex items-center gap-2">
-        <label class="font-semibold text-gray-700">End Period:</label>
-        <select
-          [(ngModel)]="endMonth"
-          (ngModelChange)="onDateRangeChange()"
-          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          @for (month of months; track month.value) {
-            <option [ngValue]="month.value">{{ month.label }}</option>
-          }
-        </select>
-        <select
-          [(ngModel)]="endYear"
-          (ngModelChange)="onDateRangeChange()"
-          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          @for (year of years; track year) {
-            <option [ngValue]="year">{{ year }}</option>
-          }
-        </select>
+        <div class="flex items-center gap-2">
+          <label for="endMonth" class="font-semibold text-gray-700">End Period:</label>
+          <select
+            id="endMonth"
+            [(ngModel)]="endMonth"
+            (ngModelChange)="onDateRangeChange()"
+            aria-label="End month"
+            class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            @for (month of months; track month.value) {
+              <option [ngValue]="month.value">{{ month.label }}</option>
+            }
+          </select>
+          <select
+            id="endYear"
+            [(ngModel)]="endYear"
+            (ngModelChange)="onDateRangeChange()"
+            aria-label="End year"
+            class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            @for (year of years; track year) {
+              <option [ngValue]="year">{{ year }}</option>
+            }
+          </select>
+        </div>
       </div>
-    </div>
-  </div>
+    </fieldset>
+  }
 
   <!-- Budget Table -->
-  <div class="bg-white rounded-lg shadow overflow-x-auto">
-    <table #budgetTable class="w-full border-collapse">
-      <!-- Header -->
-      <thead class="bg-gray-100 sticky top-0 z-10">
-        <tr>
-          <th class="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-700 min-w-[250px] sticky left-0 bg-gray-100">
-            Category
-          </th>
-          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
-            <th class="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-700 min-w-[120px]">
-              {{ month.display }}
+  @if (!loading()) {
+    <div class="bg-white rounded-lg shadow overflow-x-auto" role="region" aria-label="Budget data table">
+      <table #budgetTable class="w-full border-collapse" role="grid" [attr.aria-label]="tableAriaLabel()">
+        <!-- Header -->
+        <thead class="bg-gray-100 sticky top-0 z-10">
+          <tr role="row">
+            <th scope="col" class="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-700 min-w-[250px] sticky left-0 bg-gray-100">
+              Category
             </th>
-          }
-        </tr>
-      </thead>
+            @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+              <th scope="col" [id]="'month-header-' + month.key" class="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-700 min-w-[120px]">
+                {{ month.display }}
+              </th>
+            }
+          </tr>
+        </thead>
 
-      <tbody>
-        <!-- INCOME SECTION -->
-        <tr class="bg-blue-50">
-          <td [attr.colspan]="monthColumns().length + 1" class="border border-gray-300 px-4 py-3">
-            <h2 class="text-xl font-bold text-blue-900">Income</h2>
-          </td>
-        </tr>
+        <tbody>
+          <!-- INCOME SECTION -->
+          <tr class="bg-blue-50" role="row">
+            <td [attr.colspan]="colspanValue()" class="border border-gray-300 px-4 py-3" role="rowheader">
+              <h2 class="text-xl font-bold text-blue-900" id="income-section">Income</h2>
+            </td>
+          </tr>
 
         @for (group of budgetData().incomeGroups; track trackByGroupId($index, group)) {
           <app-category-group
@@ -94,33 +127,34 @@
           </app-category-group>
         }
 
-        <!-- Add Parent Category -->
-        <tr class="bg-gray-50">
-          <td [attr.colspan]="monthColumns().length + 1" class="border border-gray-300 px-4 py-2">
-            <button
-              (click)="addParentCategory('income')"
-              class="text-blue-600 hover:text-blue-800 font-semibold">
-              + Add New Income Category
-            </button>
-          </td>
-        </tr>
-
-        <!-- Income Total -->
-        <tr class="bg-blue-300 font-bold text-lg">
-          <td class="border border-gray-300 px-4 py-3 sticky left-0 bg-blue-300">Income Total</td>
-          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
-            <td class="border border-gray-300 px-2 py-3 text-right">
-              {{ incomeTotals()[month.key] | number:'1.2-2' }}
+          <!-- Add Parent Category -->
+          <tr class="bg-gray-50" role="row">
+            <td [attr.colspan]="colspanValue()" class="border border-gray-300 px-4 py-2">
+              <button
+                (click)="addParentCategory('income')"
+                class="text-blue-600 hover:text-blue-800 font-semibold"
+                aria-label="Add new income category group">
+                + Add New Income Category
+              </button>
             </td>
-          }
-        </tr>
+          </tr>
 
-        <!-- EXPENSES SECTION -->
-        <tr class="bg-red-50">
-          <td [attr.colspan]="monthColumns().length + 1" class="border border-gray-300 px-4 py-3">
-            <h2 class="text-xl font-bold text-red-900">Expenses</h2>
-          </td>
-        </tr>
+          <!-- Income Total -->
+          <tr class="bg-blue-300 font-bold text-lg" role="row" aria-label="Income totals">
+            <th scope="row" class="border border-gray-300 px-4 py-3 sticky left-0 bg-blue-300 text-left">Income Total</th>
+            @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+              <td class="border border-gray-300 px-2 py-3 text-right" [attr.aria-describedby]="'month-header-' + month.key">
+                {{ incomeTotals()[month.key] | number:'1.2-2' }}
+              </td>
+            }
+          </tr>
+
+          <!-- EXPENSES SECTION -->
+          <tr class="bg-red-50" role="row">
+            <td [attr.colspan]="colspanValue()" class="border border-gray-300 px-4 py-3" role="rowheader">
+              <h2 class="text-xl font-bold text-red-900" id="expense-section">Expenses</h2>
+            </td>
+          </tr>
 
         @for (group of budgetData().expenseGroups; track trackByGroupId($index, group)) {
           <app-category-group
@@ -145,74 +179,87 @@
           </app-category-group>
         }
 
-        <!-- Add Parent Category -->
-        <tr class="bg-gray-50">
-          <td [attr.colspan]="monthColumns().length + 1" class="border border-gray-300 px-4 py-2">
-            <button
-              (click)="addParentCategory('expense')"
-              class="text-red-600 hover:text-red-800 font-semibold">
-              + Add New Expense Category
-            </button>
-          </td>
-        </tr>
-
-        <!-- Expenses Total -->
-        <tr class="bg-red-300 font-bold text-lg">
-          <td class="border border-gray-300 px-4 py-3 sticky left-0 bg-red-300">Total Expenses</td>
-          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
-            <td class="border border-gray-300 px-2 py-3 text-right">
-              {{ expenseTotals()[month.key] | number:'1.2-2' }}
+          <!-- Add Parent Category -->
+          <tr class="bg-gray-50" role="row">
+            <td [attr.colspan]="colspanValue()" class="border border-gray-300 px-4 py-2">
+              <button
+                (click)="addParentCategory('expense')"
+                class="text-red-600 hover:text-red-800 font-semibold"
+                aria-label="Add new expense category group">
+                + Add New Expense Category
+              </button>
             </td>
-          }
-        </tr>
+          </tr>
 
-        <!-- Profit/Loss -->
-        <tr class="bg-yellow-200 font-bold text-lg">
-          <td class="border border-gray-300 px-4 py-3 sticky left-0 bg-yellow-200">Profit / Loss</td>
-          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
-            <td
-              class="border border-gray-300 px-2 py-3 text-right"
-              [class.text-green-700]="profitLoss()[month.key] >= 0"
-              [class.text-red-700]="profitLoss()[month.key] < 0">
-              {{ profitLoss()[month.key] | number:'1.2-2' }}
-            </td>
-          }
-        </tr>
+          <!-- Expenses Total -->
+          <tr class="bg-red-300 font-bold text-lg" role="row" aria-label="Expense totals">
+            <th scope="row" class="border border-gray-300 px-4 py-3 sticky left-0 bg-red-300 text-left">Total Expenses</th>
+            @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+              <td class="border border-gray-300 px-2 py-3 text-right" [attr.aria-describedby]="'month-header-' + month.key">
+                {{ expenseTotals()[month.key] | number:'1.2-2' }}
+              </td>
+            }
+          </tr>
 
-        <!-- Opening Balance -->
-        <tr class="bg-green-100 font-semibold">
-          <td class="border border-gray-300 px-4 py-2 sticky left-0 bg-green-100">Opening Balance</td>
-          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
-            <td class="border border-gray-300 px-2 py-2 text-right">
-              {{ balances().opening[month.key] | number:'1.2-2' }}
-            </td>
-          }
-        </tr>
+          <!-- Profit/Loss -->
+          <tr class="bg-yellow-200 font-bold text-lg" role="row" aria-label="Profit and loss">
+            <th scope="row" class="border border-gray-300 px-4 py-3 sticky left-0 bg-yellow-200 text-left">Profit / Loss</th>
+            @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+              <td
+                class="border border-gray-300 px-2 py-3 text-right"
+                [class.text-green-700]="profitLoss()[month.key] >= 0"
+                [class.text-red-700]="profitLoss()[month.key] < 0"
+                [attr.aria-describedby]="'month-header-' + month.key"
+                [attr.aria-label]="(profitLoss()[month.key] >= 0 ? 'Profit' : 'Loss') + ' of ' + (profitLoss()[month.key] | number:'1.2-2')">
+                {{ profitLoss()[month.key] | number:'1.2-2' }}
+              </td>
+            }
+          </tr>
 
-        <!-- Closing Balance -->
-        <tr class="bg-green-200 font-semibold">
-          <td class="border border-gray-300 px-4 py-2 sticky left-0 bg-green-200">Closing Balance</td>
-          @for (month of monthColumns(); track trackByMonthKey($index, month)) {
-            <td class="border border-gray-300 px-2 py-2 text-right">
-              {{ balances().closing[month.key] | number:'1.2-2' }}
-            </td>
-          }
-        </tr>
-      </tbody>
-    </table>
-  </div>
+          <!-- Opening Balance -->
+          <tr class="bg-green-100 font-semibold" role="row" aria-label="Opening balance">
+            <th scope="row" class="border border-gray-300 px-4 py-2 sticky left-0 bg-green-100 text-left">Opening Balance</th>
+            @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+              <td class="border border-gray-300 px-2 py-2 text-right" [attr.aria-describedby]="'month-header-' + month.key">
+                {{ balances().opening[month.key] | number:'1.2-2' }}
+              </td>
+            }
+          </tr>
+
+          <!-- Closing Balance -->
+          <tr class="bg-green-200 font-semibold" role="row" aria-label="Closing balance">
+            <th scope="row" class="border border-gray-300 px-4 py-2 sticky left-0 bg-green-200 text-left">Closing Balance</th>
+            @for (month of monthColumns(); track trackByMonthKey($index, month)) {
+              <td class="border border-gray-300 px-2 py-2 text-right" [attr.aria-describedby]="'month-header-' + month.key">
+                {{ balances().closing[month.key] | number:'1.2-2' }}
+              </td>
+            }
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  }
 
   <!-- Context Menu -->
   @if (contextMenuVisible()) {
     <div
+      role="menu"
+      aria-label="Cell options menu"
       class="context-menu fixed bg-white border border-gray-300 rounded shadow-lg py-2 px-4 z-50"
       [style.left.px]="contextMenuPosition().x"
       [style.top.px]="contextMenuPosition().y">
       <button
+        role="menuitem"
         (click)="applyToAllMonths($event)"
-        class="text-blue-600 hover:text-blue-800 font-medium">
+        class="text-blue-600 hover:text-blue-800 font-medium"
+        aria-label="Apply current value to all months in this category">
         Apply to all months
       </button>
     </div>
   }
+
+  <!-- Keyboard shortcuts hint -->
+  <div class="mt-4 text-sm text-gray-500" aria-live="polite">
+    <p><strong>Keyboard shortcuts:</strong> Arrow keys to navigate • Enter to add category • Escape to close menu • Tab to move between fields</p>
+  </div>
 </div>

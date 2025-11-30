@@ -1,6 +1,6 @@
 <!-- Parent Category Header -->
-<tr [class]="bgHeaderClass">
-  <td [attr.colspan]="colspanValue" class="border border-gray-300 px-4 py-2">
+<tr [class]="bgHeaderClass" role="row">
+  <td [attr.colspan]="colspanValue" class="border border-gray-300 px-4 py-2" role="rowheader">
     <div class="flex items-center justify-between gap-2">
       @if (group.isEditingName) {
         <input
@@ -11,34 +11,39 @@
           (keydown)="onParentNameKeyDown($event)"
           [class]="'flex-1 text-lg font-semibold border rounded px-2 py-1 focus:outline-none focus:ring-2 ' + textColorClass + ' ' + borderColorClass + ' ' + focusRingClass"
           placeholder="Enter group name"
+          aria-label="Edit category group name"
           autofocus>
       } @else {
         <h3 [class]="'flex-1 text-lg font-semibold ' + textColorClass">{{ group.name }}</h3>
       }
-      <div class="flex gap-2">
+      <div class="flex gap-2" role="group" aria-label="Category group actions">
         @if (group.pendingDelete) {
-          <span class="text-sm text-gray-600">Delete?</span>
+          <span class="text-sm text-gray-600">Delete this group?</span>
           <button
             (click)="confirmDeleteParent()"
-            class="text-red-600 hover:text-red-800 text-sm font-semibold">
+            class="text-red-600 hover:text-red-800 text-sm font-semibold"
+            aria-label="Confirm delete group">
             Yes
           </button>
           <button
             (click)="cancelDeleteParent()"
-            class="text-gray-600 hover:text-gray-800 text-sm">
+            class="text-gray-600 hover:text-gray-800 text-sm"
+            aria-label="Cancel delete group">
             No
           </button>
         } @else {
           @if (!group.isEditingName) {
             <button
               (click)="parentStartEdit.emit()"
-              class="text-blue-600 hover:text-blue-800 text-sm">
+              class="text-blue-600 hover:text-blue-800 text-sm"
+              aria-label="Edit group name">
               Edit
             </button>
           }
           <button
             (click)="requestDeleteParent()"
-            class="text-red-600 hover:text-red-800 text-sm">
+            class="text-red-600 hover:text-red-800 text-sm"
+            aria-label="Delete this category group">
             Delete
           </button>
         }
@@ -49,8 +54,8 @@
 
 <!-- Categories -->
 @for (category of group.categories; track trackByCategoryId($index, category)) {
-  <tr class="hover:bg-gray-50 category-row" [attr.data-category-id]="category.id">
-    <td class="border border-gray-300 px-4 py-2">
+  <tr class="hover:bg-gray-50 category-row" role="row" [attr.data-category-id]="category.id">
+    <td class="border border-gray-300 px-4 py-2" role="rowheader">
       <div class="flex items-center gap-2">
         @if (category.isEditing) {
           <input
@@ -61,11 +66,15 @@
             (keydown)="onCategoryNameKeyDown(category.id, $event)"
             [class]="'category-name flex-1 border rounded px-2 py-1 focus:outline-none focus:ring-2 ' + borderColorClass + ' ' + focusRingClass"
             placeholder="Enter category name"
+            aria-label="Edit category name"
             autofocus>
         } @else {
           <span class="flex-1 cursor-pointer hover:text-blue-600"
                 (click)="categoryStartEdit.emit({ categoryId: category.id })"
-                title="Click to edit">
+                role="button"
+                tabindex="0"
+                (keydown.enter)="categoryStartEdit.emit({ categoryId: category.id })"
+                title="Click to edit category name">
             {{ category.name || 'New Category' }}
           </span>
         }
@@ -73,18 +82,21 @@
           <span class="text-xs text-gray-500">Delete?</span>
           <button
             (click)="confirmDeleteCategory(category.id)"
-            class="text-red-600 hover:text-red-800 text-xs font-semibold">
+            class="text-red-600 hover:text-red-800 text-xs font-semibold"
+            aria-label="Confirm delete category">
             Yes
           </button>
           <button
             (click)="cancelDeleteCategory(category.id)"
-            class="text-gray-500 hover:text-gray-700 text-xs">
+            class="text-gray-500 hover:text-gray-700 text-xs"
+            aria-label="Cancel delete category">
             No
           </button>
         } @else {
           <button
             (click)="requestDeleteCategory(category.id)"
             class="text-red-500 hover:text-red-700 text-xs"
+            aria-label="Delete category"
             title="Delete category">
             ×
           </button>
@@ -92,14 +104,16 @@
       </div>
     </td>
     @for (month of monthColumns; track trackByMonthKey($index, month)) {
-      <td class="border border-gray-300 px-2 py-1 value-cell" [attr.data-month-key]="month.key">
+      <td class="border border-gray-300 px-2 py-1 value-cell" role="gridcell" [attr.data-month-key]="month.key" [attr.aria-describedby]="'month-header-' + month.key">
         <input
+          #valueInput
           type="number"
           [value]="category.values[month.key] || 0"
           (input)="onCellValueChange(category.id, month.key, $event)"
           (keydown)="onCellKeyDown(category.id, month.key, $event)"
           (contextmenu)="onCellRightClick(category.id, month.key, $event)"
           [class]="'w-full px-2 py-1 text-right border-0 focus:outline-none focus:ring-2 rounded ' + focusRingClass"
+          [attr.aria-label]="(category.name || 'New Category') + ' value for ' + month.display"
           step="0.01">
       </td>
     }
@@ -107,21 +121,22 @@
 }
 
 <!-- Add Category Button -->
-<tr class="bg-gray-50">
+<tr class="bg-gray-50" role="row">
   <td [attr.colspan]="colspanValue" class="border border-gray-300 px-4 py-2">
     <button
       (click)="categoryAdd.emit()"
-      [class]="buttonColorClass + ' text-sm'">
+      [class]="buttonColorClass + ' text-sm'"
+      [attr.aria-label]="'Add a new category to ' + group.name">
       + Add a new '{{ group.name }}' Category
     </button>
   </td>
 </tr>
 
 <!-- Sub Total -->
-<tr [class]="bgSubtotalClass + ' font-semibold'">
-  <td class="border border-gray-300 px-4 py-2">Sub Totals</td>
+<tr [class]="bgSubtotalClass + ' font-semibold'" role="row">
+  <th scope="row" class="border border-gray-300 px-4 py-2 text-left">Sub Totals</th>
   @for (month of monthColumns; track trackByMonthKey($index, month)) {
-    <td class="border border-gray-300 px-2 py-2 text-right subtotal-cell">
+    <td class="border border-gray-300 px-2 py-2 text-right subtotal-cell" role="gridcell" [attr.aria-describedby]="'month-header-' + month.key">
       {{ getSubTotal(month.key) | number:'1.2-2' }}
     </td>
   }
